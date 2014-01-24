@@ -1,0 +1,24 @@
+{
+    "name": "pgaudit",
+    "abstract": "Audit trails for PostgreSQL",
+    "description": "The extension allows creation and maintenance of audit tables monitoring usage of other tables",
+    "version": "0.0.1",
+    "maintainer": "Daniele Varrazzo",
+    "license": "postgresql",
+    "provides": {
+        "pgaudit": {
+            "abstract": "Audit trail for PostgreSQL",
+            "file": "sql/pgaudit.sql",
+            "docfile": "doc/pgaudit.rst",
+            "version": "0.0.1"
+        }
+    },
+    "release_status": "unstable",
+
+    "generated_by": "Daniele Varrazzo",
+
+    "meta-spec": {
+        "version": "1.0.0",
+        "url": "http://pgxn.org/meta/spec.txt"
+    }
+}

@@ -1,0 +1,6 @@
+# pgaudit extension
+comment = 'Audit trail for PostgreSQL'
+default_version = '0.0.1'
+superuser = true
+relocatable = false
+requires = 'plpgsql'
