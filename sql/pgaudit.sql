@@ -209,7 +209,7 @@ $$;
 create type audit_field as (
 	name name,
 	expression text,
-	type name); -- would be regtype, but 'bigserial' is not a type
+	def text);
 
 -- Return info about all the fields available
 create or replace function _field_defs()
@@ -217,8 +217,8 @@ returns setof @extschema@.audit_field
 language sql immutable as $$
 	select * from unnest(array[
 		('id', 'default', 'bigserial'),
-		('ts', 'current_timestamp', 'timestamptz'),
-		('clock', 'pg_catalog.clock_timestamp()', 'timestamptz'),
+		('ts', 'default', 'timestamptz default now()'),
+		('clock', 'default', 'timestamptz default clock_timestamp()'),
 		('user', 'session_user', 'name'),
 		('action', 'tg_op', 'text'),
 		('schema', 'tg_table_schema', 'name'),
@@ -310,7 +310,7 @@ begin
 	rv := rv || @extschema@._rename_stmts(tgt, info);
 
 	-- Create an empty table with the audit fields followed by the table ones
-	select array_agg(format('audit_%s %s', name, type))
+	select array_agg(format('audit_%s %s', name, def))
 	into strict def1
 	from @extschema@._field_defs(audit_fields);
 
