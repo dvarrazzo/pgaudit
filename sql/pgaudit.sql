@@ -530,3 +530,7 @@ language sql stable
 as $$
 	select @extschema@._mangle_name(tgt, '_audit_trg');
 $$;
+
+-- Go back to the original role or running `create extension` in a transaction
+-- would leave the wrong `current_user`.
+reset role;
