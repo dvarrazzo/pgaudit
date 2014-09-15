@@ -340,16 +340,16 @@ begin
 	rv := rv || format($f2$
 		create or replace function @extschema@.%I() returns trigger
 		security definer language plpgsql as $$
-			begin
-				if tg_op <> 'DELETE' then
-					insert into @extschema@.%I values (%s, new.*);
-					return null;
-				else
-					insert into @extschema@.%I values (%s, old.*);
-					return null;
-				end if;
-			end
-			$$
+begin
+	if tg_op <> 'DELETE' then
+		insert into @extschema@.%I values (%s, new.*);
+		return null;
+	else
+		insert into @extschema@.%I values (%s, old.*);
+		return null;
+	end if;
+end
+$$
 		$f2$,
 		@extschema@._fn_name(tgt),
 		@extschema@._audit_table_name(tgt),
