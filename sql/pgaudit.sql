@@ -56,40 +56,38 @@ as $$
 declare
 	info @extschema@.audit_info;
 	status @extschema@.audit_status;
+	stmt text;
 begin
-	info := @extschema@.info(tgt);
-	status := @extschema@.status(tgt);
+	begin -- this is a transaction in PL/pgSQL
+		info := @extschema@.info(tgt);
+		status := @extschema@.status(tgt);
 
-	-- If the table is already audited and the fields are the same
-	-- don't do anything.
-	if status = 'audited' and audit_fields = info.fields then
-		null;
+		-- If the table is already audited and the fields are the same
+		-- don't do anything.
+		if status = 'audited' and audit_fields = info.fields then
+			null;
 
-	-- If the status is paused and we are asking for the same audit fields
-	-- then just unpause it.
-	elsif status = 'paused' and audit_fields = info.fields then
-		return @extschema@.restart(tgt);
+		-- If the status is paused and we are asking for the same audit fields
+		-- then just unpause it.
+		elsif status = 'paused' and audit_fields = info.fields then
+			return @extschema@.restart(tgt);
 
-	-- Otherwise an existing audit table and start with a new one
-	else
-		-- ugh - copypasted from _execute_statements() because the sequences
-		declare
-			stmt text;
-		-- this is a transaction in PL/pgSQL
-		begin
+		-- Otherwise an existing audit table and start with a new one
+		else
 			foreach stmt
 				in array @extschema@._start_stmts(tgt, audit_fields)
 			loop
 				execute stmt;
 			end loop;
 			perform @extschema@._grant_seqs(tgt);
-		exception
-			-- you can't have this clause empty
-			when division_by_zero then raise 'wat?';
-		end;
-	end if;
+		end if;
 
-	return @extschema@.status(tgt);
+		return @extschema@.status(tgt);
+
+	exception
+		-- you can't have this clause empty
+		when division_by_zero then raise 'wat?';
+	end;
 end
 $$;
 
@@ -98,9 +96,20 @@ create or replace function stop(tgt regclass)
 returns @extschema@.audit_status
 language plpgsql
 as $$
+declare
+	stmts text[];
+	stmt text;
 begin
-	perform @extschema@._execute_statements(@extschema@._stop_stmts(tgt));
-	return @extschema@.status(tgt);
+	begin -- this is a transaction in PL/pgSQL
+		stmts = @extschema@._stop_stmts(tgt);
+		foreach stmt in array stmts loop
+			execute stmt;
+		end loop;
+		return @extschema@.status(tgt);
+	exception
+		-- you can't have this clause empty
+		when division_by_zero then raise 'wat?';
+	end;
 end
 $$;
 
@@ -109,15 +118,18 @@ create or replace function pause(tgt regclass)
 returns @extschema@.audit_status
 language plpgsql
 as $$
-declare
-	info @extschema@.audit_info;
 begin
-	if @extschema@.status(tgt) = 'audited' then
-		execute format('alter table %s disable trigger %I',
-			@extschema@._full_table_name(tgt),
-			@extschema@._trg_name(tgt));
-	end if;
-	return @extschema@.status(tgt);
+	begin -- this is a transaction in PL/pgSQL
+		if @extschema@.status(tgt) = 'audited' then
+			execute format('alter table %s disable trigger %I',
+				@extschema@._full_table_name(tgt),
+				@extschema@._trg_name(tgt));
+		end if;
+		return @extschema@.status(tgt);
+	exception
+		-- you can't have this clause empty
+		when division_by_zero then raise 'wat?';
+	end;
 end
 $$;
 
@@ -126,15 +138,18 @@ create or replace function restart(tgt regclass)
 returns @extschema@.audit_status
 language plpgsql
 as $$
-declare
-	info @extschema@.audit_info;
 begin
-	if @extschema@.status(tgt) = 'paused' then
-		execute format('alter table %s enable trigger %I',
-			@extschema@._full_table_name(tgt),
-			@extschema@._trg_name(tgt));
-	end if;
-	return @extschema@.status(tgt);
+	begin -- this is a transaction in PL/pgSQL
+		if @extschema@.status(tgt) = 'paused' then
+			execute format('alter table %s enable trigger %I',
+				@extschema@._full_table_name(tgt),
+				@extschema@._trg_name(tgt));
+		end if;
+		return @extschema@.status(tgt);
+	exception
+		-- you can't have this clause empty
+		when division_by_zero then raise 'wat?';
+	end;
 end
 $$;
 
@@ -450,26 +465,6 @@ begin
 		execute format(
 			'grant usage on sequence @extschema@.%I to audit', seq);
 	end loop;
-end
-$$;
-
-
-create or replace function _execute_statements(stmts text[])
-returns void
-language plpgsql
-as $$
-declare
-	stmt text;
-begin
-	-- this is a transaction in PL/pgSQL
-	begin
-		foreach stmt in array stmts loop
-			execute stmt;
-		end loop;
-	exception
-		-- you can't have this clause empty
-		when division_by_zero then raise 'wat?';
-	end;
 end
 $$;
 
