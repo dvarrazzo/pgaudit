@@ -95,7 +95,7 @@ from pg_class c join pg_namespace n on n.oid = relnamespace
 where nspname = 'testaudit' and relname ~ '^public.test_';
 
 -- Everything should work with problematic names
-create schema if not exists "some-schema";
+create schema "some-schema";
 create table "some-schema"."some.table" ("some|field" integer);
 select testaudit.start('"some-schema"."some.table"', '{id,action,table}');
 select * from testaudit.info('"some-schema"."some.table"');
@@ -146,3 +146,4 @@ drop table test;
 drop table "some-schema"."some.table";
 drop table tseq;
 drop table test2;
+drop schema "some-schema";

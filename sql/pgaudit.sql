@@ -484,7 +484,7 @@ create or replace function _mangle_name(
 returns name
 language sql stable
 as $$
-	select format('%I.%I', nspname, relname || suffix)::name
+	select format('%I.%I', nspname, relname || $2)::name
 	from pg_class r
 	join pg_namespace n on relnamespace = n.oid
 	where r.oid = $1;
@@ -499,7 +499,7 @@ create or replace function _full_table_name(tgt regclass)
 returns name
 language sql stable
 as $$
-	select @extschema@._mangle_name(tgt);
+	select @extschema@._mangle_name($1);
 $$;
 
 -- Return the name of the audit table for a table
@@ -512,7 +512,7 @@ create or replace function _audit_table_name(
 returns name
 language sql stable
 as $$
-	select @extschema@._mangle_name(tgt, suffix);
+	select @extschema@._mangle_name($1, $2);
 $$;
 
 -- Return the name of the audit trigger function for a table
@@ -520,7 +520,7 @@ create or replace function _fn_name(tgt regclass)
 returns name
 language sql stable
 as $$
-	select @extschema@._mangle_name(tgt, '_fn');
+	select @extschema@._mangle_name($1, '_fn');
 $$;
 
 -- Return the name of the audit trigger for a table
@@ -528,7 +528,7 @@ create or replace function _trg_name(tgt regclass)
 returns name
 language sql stable
 as $$
-	select @extschema@._mangle_name(tgt, '_audit_trg');
+	select @extschema@._mangle_name($1, '_audit_trg');
 $$;
 
 -- Go back to the original role or running `create extension` in a transaction
