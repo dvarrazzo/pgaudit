@@ -9,7 +9,7 @@
         "pgaudit": {
             "abstract": "Audit trail for PostgreSQL",
             "file": "sql/pgaudit.sql",
-            "docfile": "doc/pgaudit.rst",
+            "docfile": "doc/pgaudit.md",
             "version": "0.0.1"
         }
     },

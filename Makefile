@@ -2,7 +2,7 @@ EXTENSION    = pgaudit
 EXTVERSION   = $(shell grep default_version $(EXTENSION).control | sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
 
 DATA         = $(filter-out $(wildcard sql/*--*.sql),$(wildcard sql/*.sql))
-DOCS         = $(wildcard doc/*.rst)
+DOCS         = $(wildcard doc/*.md)
 REGRESS      = testaudit otherns
 REGRESS_OPTS = --inputdir=test --load-language=plpgsql
 #
