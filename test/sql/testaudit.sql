@@ -105,7 +105,7 @@ alter table rot add moredata int;
 select testaudit.rotate('rot');
 select count(*)
 from pg_class c join pg_namespace n on n.oid = relnamespace
-where nspname = 'testaudit' and relname ~ '^public.rot_';
+where nspname = 'testaudit' and relname ~ '^public.rot_' and relkind = 'r';
 insert into rot values (20, 30);
 select * from testaudit."public.rot" order by data;
 
@@ -116,7 +116,7 @@ select pg_sleep(1);		-- conflict on rename
 select testaudit.rotate('rot');
 select count(*)
 from pg_class c join pg_namespace n on n.oid = relnamespace
-where nspname = 'testaudit' and relname ~ '^public.rot_';
+where nspname = 'testaudit' and relname ~ '^public.rot_' and relkind = 'r';
 select * from testaudit.info('rot');
 
 -- Everything should work with problematic names

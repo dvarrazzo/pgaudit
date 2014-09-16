@@ -125,8 +125,8 @@ select testaudit.rotate('rot');
 audited
 select count(*)
 from pg_class c join pg_namespace n on n.oid = relnamespace
-where nspname = 'testaudit' and relname ~ '^public.rot_';
-3
+where nspname = 'testaudit' and relname ~ '^public.rot_' and relkind = 'r';
+1
 insert into rot values (20, 30);
 select * from testaudit."public.rot" order by data;
 1|INSERT|20|30
@@ -140,8 +140,8 @@ select testaudit.rotate('rot');
 audited
 select count(*)
 from pg_class c join pg_namespace n on n.oid = relnamespace
-where nspname = 'testaudit' and relname ~ '^public.rot_';
-5
+where nspname = 'testaudit' and relname ~ '^public.rot_' and relkind = 'r';
+2
 select * from testaudit.info('rot');
 testaudit."public.rot"|{id,action}|t|t|t
 -- Everything should work with problematic names
