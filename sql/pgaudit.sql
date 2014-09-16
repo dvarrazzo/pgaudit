@@ -60,7 +60,7 @@ declare
 begin
 	begin -- this is a transaction in PL/pgSQL
 		info := @extschema@.info(tgt);
-		status := @extschema@.status(tgt);
+		status := @extschema@._status(info);
 
 		-- If the table is already audited and the fields are the same
 		-- don't do anything.
@@ -91,7 +91,7 @@ begin
 end
 $$;
 
--- Remove audit trigger from a table and rotate the audit table away
+-- Remove audit trigger from a table and rename the audit table away
 create or replace function stop(tgt regclass)
 returns @extschema@.audit_status
 language plpgsql
@@ -106,6 +106,36 @@ begin
 			execute stmt;
 		end loop;
 		return @extschema@.status(tgt);
+	exception
+		-- you can't have this clause empty
+		when division_by_zero then raise 'wat?';
+	end;
+end
+$$;
+
+-- Rename the current log table away and start a new one keeping its definition
+create or replace function rotate(tgt regclass)
+returns @extschema@.audit_status
+language plpgsql
+as $$
+declare
+	info @extschema@.audit_info;
+	status @extschema@.audit_status;
+begin
+	begin -- this is a transaction in PL/pgSQL
+		info := @extschema@.info(tgt);
+		status := @extschema@._status(info);
+
+		if status = 'unaudited' then
+			-- we don't know the columns so we cannot start
+			return status;
+		end if;
+
+		perform @extschema@.stop(tgt);
+		perform @extschema@.start(tgt, info.fields);
+
+		return @extschema@.status(tgt);
+
 	exception
 		-- you can't have this clause empty
 		when division_by_zero then raise 'wat?';
@@ -192,28 +222,32 @@ begin
 end
 $$;
 
+
+-- Internal function to get the status from an info structure
+create or replace function _status(info @extschema@.audit_info)
+returns @extschema@.audit_status
+language sql immutable strict
+as $$
+select case
+	when $1.table is not null and $1.has_function and $1.has_trigger
+			and $1.trigger_enabled then
+		'audited'::@extschema@.audit_status
+	when $1.table is not null and $1.has_function and $1.has_trigger
+			and not $1.trigger_enabled then
+		'paused'
+	when not ($1.table is not null or $1.has_function or $1.has_trigger) then
+		'unaudited'
+	else
+		'inconsistent'
+	end;
+$$;
+
 -- Return a string with the audit status of a table
 create or replace function status(tgt regclass)
 returns @extschema@.audit_status
-language plpgsql stable
+language sql stable strict
 as $$
-declare
-	info @extschema@.audit_info;
-begin
-	info := @extschema@.info(tgt);
-	if info.table is not null and info.has_function and info.has_trigger
-			and info.trigger_enabled then
-		return 'audited';
-	elsif info.table is not null and info.has_function and info.has_trigger
-			and not info.trigger_enabled then
-		return 'paused';
-	elsif not (info.table is not null or info.has_function or info.has_trigger)
-			then
-		return 'unaudited';
-	else
-		return 'inconsistent';
-	end if;
-end
+	select @extschema@._status(@extschema@.info($1));
 $$;
 
 

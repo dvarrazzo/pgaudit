@@ -94,6 +94,31 @@ select count(*)
 from pg_class c join pg_namespace n on n.oid = relnamespace
 where nspname = 'testaudit' and relname ~ '^public.test_';
 
+-- Rotate works as expected
+create table rot(data int);
+select testaudit.rotate('rot');
+select testaudit.start('rot', '{id,action}'::text[]);
+insert into rot values (10);
+select * from testaudit."public.rot" order by data;
+select pg_sleep(1);		-- conflict on rename
+alter table rot add moredata int;
+select testaudit.rotate('rot');
+select count(*)
+from pg_class c join pg_namespace n on n.oid = relnamespace
+where nspname = 'testaudit' and relname ~ '^public.rot_';
+insert into rot values (20, 30);
+select * from testaudit."public.rot" order by data;
+
+-- Recover from inconsistent
+drop trigger "public.rot_audit_trg" on rot;
+select testaudit.status('rot');
+select pg_sleep(1);		-- conflict on rename
+select testaudit.rotate('rot');
+select count(*)
+from pg_class c join pg_namespace n on n.oid = relnamespace
+where nspname = 'testaudit' and relname ~ '^public.rot_';
+select * from testaudit.info('rot');
+
 -- Everything should work with problematic names
 create schema "some-schema";
 create table "some-schema"."some.table" ("some|field" integer);
@@ -143,6 +168,7 @@ select count(*) from testaudit."""some-schema"".""some.table""";
 
 -- Clear up for next tests
 drop table test;
+drop table rot;
 drop table "some-schema"."some.table";
 drop table tseq;
 drop table test2;

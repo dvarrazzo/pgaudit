@@ -79,6 +79,20 @@ renamed into something like `audit."public.foo_20140124_123734"`.  The new
 name is published in a notice.
 
 
+function `audit.rotate(TABLE)`
+------------------------------
+
+Rename the current audit table away and start auditing in a new table.
+
+Parameters:
+
+- `TABLE` (`regclass`): name or oid of the table to rotate audit for.
+
+The previous audit table will be renamed as described in `stop()`.The new
+table will have the same audit fields installed on `start()` but changes to
+the table structure will be picked up.
+
+
 function `audit.pause(TABLE)`
 -----------------------------
 

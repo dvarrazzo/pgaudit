@@ -109,6 +109,41 @@ select count(*)
 from pg_class c join pg_namespace n on n.oid = relnamespace
 where nspname = 'testaudit' and relname ~ '^public.test_';
 2
+-- Rotate works as expected
+create table rot(data int);
+select testaudit.rotate('rot');
+unaudited
+select testaudit.start('rot', '{id,action}'::text[]);
+audited
+insert into rot values (10);
+select * from testaudit."public.rot" order by data;
+1|INSERT|10
+select pg_sleep(1);		-- conflict on rename
+
+alter table rot add moredata int;
+select testaudit.rotate('rot');
+audited
+select count(*)
+from pg_class c join pg_namespace n on n.oid = relnamespace
+where nspname = 'testaudit' and relname ~ '^public.rot_';
+3
+insert into rot values (20, 30);
+select * from testaudit."public.rot" order by data;
+1|INSERT|20|30
+-- Recover from inconsistent
+drop trigger "public.rot_audit_trg" on rot;
+select testaudit.status('rot');
+inconsistent
+select pg_sleep(1);		-- conflict on rename
+
+select testaudit.rotate('rot');
+audited
+select count(*)
+from pg_class c join pg_namespace n on n.oid = relnamespace
+where nspname = 'testaudit' and relname ~ '^public.rot_';
+5
+select * from testaudit.info('rot');
+testaudit."public.rot"|{id,action}|t|t|t
 -- Everything should work with problematic names
 create schema "some-schema";
 create table "some-schema"."some.table" ("some|field" integer);
@@ -170,6 +205,7 @@ select count(*) from testaudit."""some-schema"".""some.table""";
 4
 -- Clear up for next tests
 drop table test;
+drop table rot;
 drop table "some-schema"."some.table";
 drop table tseq;
 drop table test2;
