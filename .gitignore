@@ -4,8 +4,8 @@ tmp/
 *.o
 regression.diffs
 regression.out
-/sql/pgaudit--*
-!/sqlpgaudit--*--*.sql
+/sql/pgaudit--*.sql
+!/sql/pgaudit--*--*.sql
 test/sql/otherns.sql
 test/expected/otherns.out
 doc/pgaudit.html

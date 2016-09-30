@@ -22,6 +22,35 @@ an user called `audit`.
 	create extension pgaudit with schema audit;
 
 
+Audit fields
+------------
+
+The following fields can be added to each record in the audit trail:
+
+- `id` (`bigint`): a numeric sequence of the operation
+- `ts` (`timestamptz`): transaction timestamp of the operation.
+  Rows updated in the same transaction will have the same value
+- `clock` (`timestamptz`): wall clock timestamp of the operation.
+  Increases even within the same transaction
+- `action` (`text`): the operation performed (`INSERT`, `UPDATE`, `DELETE`)
+- `schema` (`name`): the schema name of the audited table
+- `table` (`name`): the name of the audited table
+- `user` (`name`): the user performing the operation. (Note: the
+  `session_user`, not the `current_user`)
+- `user_id` (`text`): an app-defined user id, read from the `SCHEMA.user_id`
+  setting parameter (where *SCHEMA* is the schema the extension is installed
+  into).
+
+The `user_id` setting should be set beforehand, e.g. with a statement such as
+`SET [LOCAL] "audit.user_id" TO n`. At the time of updating an audited table
+the setting **must** exist, either because `SET` was called or because
+declared in a [customized option][1] in the `postgres.conf` file; failing to
+do so, auditing will result in an "unrecognized configuration parameter"
+error.
+
+[1]: https://www.postgresql.org/docs/current/static/runtime-config-custom.html
+
+
 function `audit.start(TABLE [, FIELDS])`
 ----------------------------------------
 
@@ -30,22 +59,9 @@ Start auditing a function. On success return the `audited` value.
 Parameters:
 
 - `TABLE` (`regclass`): name or oid of the table to audit.
-- `FIELDS` (array of `text`): list of audit fields to include in the trail.
+- `FIELDS` (array of `text`): list of audit fields to include in the trail,
+  chosen from the ones available in the [Audit fields](#audit-fields) section.
   Default: `ts`, `action`.
-
-Allowed fields are:
-
-- `id` (`bigint`): a numeric sequence of the operation
-- `ts` (`timestamptz`): transaction timestamp of the operation.
-  Rows updated in the same transaction will have the same value
-- `clock` (`timestamptz`): wall clock timestamp of the operation.
-  Increases even within the same transaction
-- `action` (`text`): the operation performed (`INSERT`, `UPDATE`,
-  `DELETE`)
-- `schema` (`name`): the schema name of the audited table
-- `table` (`name`): the name of the audited table
-- `user` (`name`): the user performing the operation. (Note: the
-  `session_user`, not the `current_user`)
 
 The command will create a new table in the `audit` schema called like the
 original table *with its schema*. E.g. auditing the table `foo` in the

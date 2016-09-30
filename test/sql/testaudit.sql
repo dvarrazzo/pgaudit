@@ -160,6 +160,13 @@ select
 	from testaudit."public.test2";
 commit;
 
+-- Test user_id
+set testaudit.user_id to '42';
+create table testuid (data integer);
+select testaudit.start('testuid', '{user_id}');
+insert into testuid values (1);
+select * from testaudit."public.testuid";
+
 -- Dropping the extension audit should continue no problem
 -- (at least it shouldn't fail dml)
 drop extension pgaudit;
@@ -172,4 +179,5 @@ drop table rot;
 drop table "some-schema"."some.table";
 drop table tseq;
 drop table test2;
+drop table testuid;
 drop schema "some-schema";
