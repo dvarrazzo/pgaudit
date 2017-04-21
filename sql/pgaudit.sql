@@ -251,6 +251,41 @@ as $$
 $$;
 
 
+-- Create an index on an audit table
+-- Create a simple btree index on a single field with a trivial but unique name
+-- If the audit table is partitioned create the index on all the partitions.
+create or replace function create_index(tgt regclass, field name)
+returns void
+language plpgsql
+as $$
+begin
+	perform @extschema@._create_table_index(
+		(@extschema@.info(tgt))."table", field);
+end
+$$;
+
+-- Create an index on a table, recurse to subclasses
+create or replace function _create_table_index(tbl regclass, field name)
+returns void
+language plpgsql
+as $$
+declare
+	sql text;
+	inh regclass;
+begin
+	sql := format('create index %I on %s (%I)',
+		@extschema@._table_name(tbl) || '_' || field || '_idx',
+		tbl, field);
+	raise notice 'creating index with definition: %', sql;
+	execute sql;
+
+	for inh in select inhrelid from pg_inherits where inhparent = tbl loop
+		perform @extschema@._create_table_index(inh, field);
+	end loop;
+end
+$$;
+
+
 --
 -- Definitions of the fields available for audit
 --
@@ -508,6 +543,15 @@ $$;
 -- Functions to mess up with names
 --
 
+-- Return the name of a table, without schema name.
+create or replace function _table_name(tgt regclass)
+returns name
+language sql stable
+as $$
+	select relname from pg_class where oid = $1;
+$$;
+
+
 -- Return the namespace-qualified name of a table, possibly adding it a suffix
 create or replace function _mangle_name(
 	tgt regclass, suffix text default '')
@@ -520,6 +564,7 @@ as $$
 	where r.oid = $1;
 $$;
 
+
 -- Return the full name of the table being audited
 -- The name is fully qualified to avoid search_path troubles,
 -- so it shouldn't be added to queries using %I, otherwise extra
@@ -531,6 +576,7 @@ language sql stable
 as $$
 	select @extschema@._mangle_name($1);
 $$;
+
 
 -- Return the name of the audit table for a table
 -- The function name can (and will) contain special chars and
@@ -545,6 +591,7 @@ as $$
 	select @extschema@._mangle_name($1, $2);
 $$;
 
+
 -- Return the name of the audit trigger function for a table
 create or replace function _fn_name(tgt regclass)
 returns name
@@ -553,6 +600,7 @@ as $$
 	select @extschema@._mangle_name($1, '_fn');
 $$;
 
+
 -- Return the name of the audit trigger for a table
 create or replace function _trg_name(tgt regclass)
 returns name
@@ -560,6 +608,7 @@ language sql stable
 as $$
 	select @extschema@._mangle_name($1, '_audit_trg');
 $$;
+
 
 -- Go back to the original role or running `create extension` in a transaction
 -- would leave the wrong `current_user`.
