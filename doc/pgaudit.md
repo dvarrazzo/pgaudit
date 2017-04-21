@@ -160,3 +160,20 @@ Example result:
 		   table        |   fields    | has_function | has_trigger | trigger_enabled
 	--------------------+-------------+--------------+-------------+-----------------
 	 audit."public.foo" | {ts,action} | t            | t           | t
+
+
+function `audit.create_index(TABLE, FIELD)`
+-------------------------------------------
+
+Create an index on FIELD of the audit table of TABLE
+
+Parameters:
+
+- `TABLE` (`regclass`): name or oid of the table on whose audit table create
+  the index.
+- `FIELD` (`name`): name of the field to create the index on.
+
+The index will be named `SCHEMA.TABLE_FIELD_idx` and will be a simple btree
+index on the entire table. It is not possible to create the index concurrently
+(it's not possible inside a function). If there are inheriting tables create
+indexes on them too.
